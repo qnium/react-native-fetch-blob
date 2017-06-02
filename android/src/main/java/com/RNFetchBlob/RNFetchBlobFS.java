@@ -881,6 +881,12 @@ public class RNFetchBlobFS {
         return false;
     }
 
+    static boolean isContent(String path) {
+        if(path != null)
+            return path.startsWith(RNFetchBlobConst.FILE_PREFIX_CONTENT);
+        return false;
+    }
+
     static String normalizePath(String path) {
         if(path == null)
             return null;
@@ -889,6 +895,9 @@ public class RNFetchBlobFS {
             return path;
         }
         if(path.startsWith(RNFetchBlobConst.FILE_PREFIX_BUNDLE_ASSET)) {
+            return path;
+        }
+        if(path.startsWith(RNFetchBlobConst.FILE_PREFIX_CONTENT)) {
             return path;
         }
         else

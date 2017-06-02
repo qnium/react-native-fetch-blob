@@ -1,5 +1,6 @@
 package com.RNFetchBlob;
 
+import android.net.Uri;
 import android.util.Base64;
 
 import com.facebook.react.bridge.Arguments;
@@ -149,7 +150,19 @@ public class RNFetchBlobBody extends RequestBody{
                 } catch (Exception e) {
                     throw new Exception("error when getting request stream from asset : " +e.getLocalizedMessage());
                 }
-            } else {
+            }
+            // path starts with content://
+            else if (RNFetchBlobFS.isContent(orgPath)) {
+                try {
+                    Uri contentUri = Uri.parse(orgPath);
+                    return RNFetchBlob.RCTContext.getApplicationContext()
+                        .getContentResolver()
+                        .openInputStream(contentUri);
+                } catch (Exception e) {
+                    throw new Exception("error when getting request stream from content: " +e.getLocalizedMessage());
+                }
+            }
+            else {
                 File f = new File(RNFetchBlobFS.normalizePath(orgPath));
                 try {
                     if(!f.exists())
@@ -204,7 +217,7 @@ public class RNFetchBlobBody extends RequestBody{
                 if (data.startsWith(RNFetchBlobConst.FILE_PREFIX)) {
                     String orgPath = data.substring(RNFetchBlobConst.FILE_PREFIX.length());
                     orgPath = RNFetchBlobFS.normalizePath(orgPath);
-                    // path starts with content://
+                    // path starts with bundle-assets://
                     if (RNFetchBlobFS.isAsset(orgPath)) {
                         try {
                             String assetName = orgPath.replace(RNFetchBlobConst.FILE_PREFIX_BUNDLE_ASSET, "");
@@ -212,6 +225,18 @@ public class RNFetchBlobBody extends RequestBody{
                             pipeStreamToFileStream(in, os);
                         } catch (IOException e) {
                             RNFetchBlobUtils.emitWarningEvent("Failed to create form data asset :" + orgPath + ", " + e.getLocalizedMessage() );
+                        }
+                    }
+                    // path starts with content://
+                    else if (RNFetchBlobFS.isContent(orgPath)) {
+                        try {
+                            Uri contentUri = Uri.parse(orgPath);
+                            InputStream in = ctx.getApplicationContext()
+                                .getContentResolver()
+                                .openInputStream(contentUri);
+                            pipeStreamToFileStream(in, os);
+                        } catch (IOException e) {
+                            RNFetchBlobUtils.emitWarningEvent("Failed to create form data from content:" + orgPath + ", " + e.getLocalizedMessage() );
                         }
                     }
                     // data from normal files
@@ -314,6 +339,19 @@ public class RNFetchBlobBody extends RequestBody{
                         try {
                             String assetName = orgPath.replace(RNFetchBlobConst.FILE_PREFIX_BUNDLE_ASSET, "");
                             long length = ctx.getAssets().open(assetName).available();
+                            total += length;
+                        } catch (IOException e) {
+                            RNFetchBlobUtils.emitWarningEvent(e.getLocalizedMessage());
+                        }
+                    }
+                    // path starts with content://
+                    else if (RNFetchBlobFS.isContent(orgPath)) {
+                        try {
+                            Uri contentUri = Uri.parse(orgPath);
+                            InputStream contentStream = ctx.getApplicationContext()
+                                    .getContentResolver()
+                                    .openInputStream(contentUri);
+                            long length = contentStream.available();
                             total += length;
                         } catch (IOException e) {
                             RNFetchBlobUtils.emitWarningEvent(e.getLocalizedMessage());
